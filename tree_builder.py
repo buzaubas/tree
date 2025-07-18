@@ -27,13 +27,13 @@ def build_tree(data):
         if parent_id in (None, "", 0):
             node.parent = root
         elif parent_id == node_id:
-            print(f"⚠️ Warning: node {node_id} has itself as parent. Skipping.")
+            print(f"Warning: node {node_id} has itself as parent. Skipping.")
             continue
         else:
             parent_node = id_to_node.get(parent_id)
             if parent_node:
                 node.parent = parent_node
             else:
-                print(f"⚠️ Warning: parent {parent_id} not found for node {node.name} (id={node_id})")
+                print(f"Warning: parent {parent_id} not found for node {node.name} (id={node_id})")
 
     return root
