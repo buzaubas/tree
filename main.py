@@ -7,6 +7,10 @@ from collections import defaultdict
 from tree_builder import build_tree
 from downloader import fetch_data
 
+from tree_from_excel import create_tree_from_excel
+
+from compare_trees import compare_tree_files
+
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -28,6 +32,11 @@ from anytree import RenderTree
 with open("tree_output.txt", "w", encoding="utf-8") as f:
     for pre, fill, node in RenderTree(tree_root):
         f.write(f"{pre}{node.name} \t ({node.code})\n")
+
+create_tree_from_excel()
+
+compare_tree_files("tree_excel.txt", "tree_output.txt")
+
 
 
 
