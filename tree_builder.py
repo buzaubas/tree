@@ -1,7 +1,7 @@
 from anytree import Node
 
 def build_tree(data):
-    root = Node("Казахстан", code=0)
+    root = Node("Kazakhstan", code=0)
     id_to_node = {}
 
     for item in data:

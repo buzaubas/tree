@@ -48,3 +48,4 @@ def create_tree_from_excel():
     with open("tree_excel.txt", "w", encoding="utf-8") as f:
         for pre, _, node in RenderTree(root):
             f.write(f"{pre}{node.name} \t ({node.code})\n")
+

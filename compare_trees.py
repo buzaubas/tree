@@ -1,5 +1,6 @@
 import re
 from collections import defaultdict
+import pandas as pd
 
 def get_level(line):
     """Estimate tree depth by counting indent (│, └, ├ and whitespace)."""
@@ -8,7 +9,7 @@ def get_level(line):
         return match.group(0).count("│") + match.group(0).count("    ") + match.group(0).count("─") // 2
     return 0
 
-def compare_tree_files(file1_path, file2_path):
+def compare_tree_files(file1_path, file2_path, output_excel_path="tree_diff.xlsx"):
     with open(file1_path, "r", encoding="utf-8") as f1, open(file2_path, "r", encoding="utf-8") as f2:
         lines1 = f1.readlines()
         lines2 = f2.readlines()
@@ -16,6 +17,7 @@ def compare_tree_files(file1_path, file2_path):
     max_len = max(len(lines1), len(lines2))
     diffs = []
     level_diff_count = defaultdict(int)
+    excel_rows = []
 
     for i in range(max_len):
         line1 = lines1[i].rstrip() if i < len(lines1) else None
@@ -27,6 +29,12 @@ def compare_tree_files(file1_path, file2_path):
             diffs.append(f"Line {i+1} (Level {level}):\n"
                          f"  Tree1: {line1 if line1 is not None else '[Missing]'}\n"
                          f"  Tree2: {line2 if line2 is not None else '[Missing]'}")
+            excel_rows.append({
+                "Line": i + 1,
+                "Level": level,
+                "Tree1": line1 if line1 is not None else "[Missing]",
+                "Tree2": line2 if line2 is not None else "[Missing]"
+            })
 
     if not diffs:
         print("Trees are identical.")
@@ -38,3 +46,8 @@ def compare_tree_files(file1_path, file2_path):
         print("\nSummary of Differences by Level:")
         for level in sorted(level_diff_count):
             print(f"  Level {level}: {level_diff_count[level]} difference(s)")
+
+        # Сохраняем в Excel
+        df = pd.DataFrame(excel_rows)
+        df.to_excel(output_excel_path, index=False)
+        print(f"\nExcel file saved as: {output_excel_path}")
