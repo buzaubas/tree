@@ -11,7 +11,7 @@ from tree_from_excel import create_tree_from_excel
 
 from compare_trees import compare_tree_files
 
-from visualize import visualize_tree_comparison
+from visualize import compare_and_visualize_trees
 
 
 
@@ -36,7 +36,14 @@ create_tree_from_excel()
 
 compare_tree_files("tree_excel.txt", "tree_output.txt")
 
-visualize_tree_comparison("tree_excel.txt", "tree_output.txt", output_path="comparison.png", max_nodes=800)
+compare_and_visualize_trees(
+    "tree_excel.txt",
+    "tree_output.txt",
+    output="tree_comparison",
+    fmt="png",
+    max_nodes=300  # Optional: limit for speed
+)
+
 
 
 
