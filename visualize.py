@@ -1,85 +1,61 @@
-from graphviz import Digraph
+import svgwrite
 
+def parse_tree_file(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
+        lines = [line.rstrip('\n') for line in f if line.strip()]
 
-def parse_tree_txt(file_path):
     tree = []
-    with open(file_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            parts = line.strip().split("\t")
-            if len(parts) < 2:
-                continue
-            visual, label = parts
-            indent = visual.count("│") + visual.count("    ") + visual.count("─") // 2
-            name = visual.strip("├└─│ ")
-            code = label.strip("()")
-            tree.append((indent, name, code))
+    stack = [(tree, -1)]
+
+    for line in lines:
+        cleaned = line.lstrip("│").lstrip("├└─ ")
+        # Кол-во отступов: считаем каждый блок из 4 пробелов или символ '│'
+        indent = (len(line) - len(line.lstrip(' │'))) // 4
+        node = {"name": cleaned, "children": []}
+
+        while stack and indent <= stack[-1][1]:
+            stack.pop()
+        stack[-1][0].append(node)
+        stack.append((node["children"], indent))
+
     return tree
 
+def flatten_tree(tree, prefix=''):
+    result = []
+    for node in tree:
+        full_name = prefix + node["name"]
+        result.append(full_name)
+        result.extend(flatten_tree(node["children"], prefix + '  '))
+    return result
 
-def build_node_map(tree):
-    """Returns a flat map of level -> node and node relationships."""
-    level_stack = {}
-    edges = []
-    nodes = set()
+def draw_tree(dwg, tree, x, y, missing_nodes=None, line_height=20, indent=20):
+    def _draw(node_list, level, y_offset):
+        for node in node_list:
+            color = "red" if missing_nodes and node["name"] in missing_nodes else "black"
+            dwg.add(dwg.text("  " * level + node["name"], insert=(x + level * indent, y_offset), fill=color, font_size="14px", font_family="Arial"))
+            y_offset += line_height
+            y_offset = _draw(node["children"], level + 1, y_offset)
+        return y_offset
 
-    for level, name, code in tree:
-        node_id = f"{name} ({code})"
-        nodes.add(node_id)
-        level_stack[level] = node_id
-        if level > 0 and (level - 1) in level_stack:
-            parent = level_stack[level - 1]
-            edges.append((parent, node_id))
+    return _draw(tree, 0, y)
 
-    return nodes, edges
+def compare_and_draw_svg(file1, file2, output_svg="comparison.svg"):
+    tree1 = parse_tree_file(file1)
+    tree2 = parse_tree_file(file2)
 
+    flat1 = set(flatten_tree(tree1))
+    flat2 = set(flatten_tree(tree2))
 
-def compare_and_visualize_trees(file1, file2, output="tree_comparison", fmt="png", max_nodes=None):
-    tree1 = parse_tree_txt(file1)
-    tree2 = parse_tree_txt(file2)
+    missing_in_1 = flat2 - flat1
+    missing_in_2 = flat1 - flat2
 
-    nodes1, edges1 = build_node_map(tree1)
-    nodes2, edges2 = build_node_map(tree2)
+    dwg = svgwrite.Drawing(output_svg, profile='full', size=("2000px", "400000px"))
+    dwg.add(dwg.text("API Мин Цифры", insert=(50, 20), font_size="18px", font_weight="bold"))
+    dwg.add(dwg.text("Бюро Нац Статистики", insert=(1050, 20), font_size="18px", font_weight="bold"))
 
-    all_nodes = nodes1.union(nodes2)
+    draw_tree(dwg, tree1, x=50, y=40, missing_nodes=missing_in_2)
+    draw_tree(dwg, tree2, x=1050, y=40, missing_nodes=missing_in_1)
 
-    dot = Digraph(name="Comparison")
-    dot.attr(rankdir="LR")  # Left to right layout
-    dot.attr("node", shape="box", style="filled", fontname="Arial", fontsize="10")
+    dwg.save()
+    print(f"SVG saved to {output_svg}")
 
-    # Virtual root for clarity
-    dot.node("EXCEL_TREE", label="Excel Tree", fillcolor="lightblue")
-    dot.node("API_TREE", label="API Tree", fillcolor="lightgreen")
-
-    count = 0
-    for node in all_nodes:
-        if max_nodes and count >= max_nodes:
-            break
-        in1 = node in nodes1
-        in2 = node in nodes2
-
-        if in1 and in2:
-            color = "white"
-        else:
-            color = "red"
-
-        dot.node(node, fillcolor=color)
-        count += 1
-
-    for src, dst in edges1:
-        if max_nodes and (src not in dot.body or dst not in dot.body):
-            continue
-        dot.edge(src, dst)
-        if src not in nodes2:
-            dot.edge("EXCEL_TREE", src)
-
-    for src, dst in edges2:
-        if max_nodes and (src not in dot.body or dst not in dot.body):
-            continue
-        dot.edge(src, dst)
-        if src not in nodes1:
-            dot.edge("API_TREE", src)
-
-    dot.render(filename=output, format=fmt, cleanup=True)
-    print(f"Comparison tree saved to {output}.{fmt}")
